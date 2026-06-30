@@ -136,11 +136,16 @@ function doSearch() {
     var idMatch = q.match(/(\d{16,20})/);
     if (idMatch) {
         resolveId(q, idMatch[1]).then(function(info) {
-            if (info) {
+            if (info && info.book_id) {
                 book = info;
                 fetchDir().then(function() { showDownload(); });
+                btn.disabled = false; btn.textContent = '搜索';
+            } else if (info && info.error) {
+                $('results').innerHTML = '<div class="error">' + info.error + '</div>';
+                btn.disabled = false; btn.textContent = '搜索';
+            } else {
+                btn.disabled = false; btn.textContent = '搜索';
             }
-            btn.disabled = false; btn.textContent = '搜索';
         });
         return;
     }
@@ -159,18 +164,10 @@ function doSearch() {
 }
 
 function resolveId(q, id) {
-    // 链接包含 /reader/ -> 把 item_id 解析成 book_id
+    // 纯前端无法从读者 API 获取 book_id（反爬保护）
+    // 对于读者链接，提示用户手动搜索
     if (q.indexOf('/reader/') !== -1) {
-        return proxyFetch('https://novel.snssdk.com/api/novel/reader/full/v1/?item_id=' + id + '&aid=1967').then(function(resp) {
-            var novel = (resp.data && resp.data.novel) || {};
-            return {
-                book_id: novel.book_id || id,
-                title: novel.book_name || novel.title || '',
-                author: novel.author || ''
-            };
-        }).catch(function() {
-            return {book_id: id};
-        });
+        return Promise.resolve({book_id: null, error: '章节链接无法直接解析，请复制书籍名搜索'});
     }
     // 链接包含 /book/ 或纯 book_id
     return Promise.resolve({book_id: id});
