@@ -159,19 +159,20 @@ function doSearch() {
 }
 
 function resolveId(q, id) {
-    // 章节链接: /reader/{item_id} -> 需要解析 book_id
+    // 链接包含 /reader/ -> 把 item_id 解析成 book_id
     if (q.indexOf('/reader/') !== -1) {
-        return proxyFetch('https://novel.snssdk.com/api/novel/reader/full/v1/?book_id=&item_id=' + id + '&aid=1967').then(function(){ return {book_id: id}; }).catch(function() {
-            // 回退：直接用 ID，尝试当作 book_id
+        return proxyFetch('https://novel.snssdk.com/api/novel/reader/full/v1/?item_id=' + id + '&aid=1967').then(function(resp) {
+            var novel = (resp.data && resp.data.novel) || {};
+            return {
+                book_id: novel.book_id || id,
+                title: novel.book_name || novel.title || '',
+                author: novel.author || ''
+            };
+        }).catch(function() {
             return {book_id: id};
-        }).then(function(info) {
-            // 从目录页面获取书名
-            return proxyFetch('https://fanqienovel.com/api/reader/directory/detail?bookId=' + info.book_id).then(function() {
-                return info;
-            }).catch(function() { return info; });
         });
     }
-    // 纯ID，当作 book_id
+    // 链接包含 /book/ 或纯 book_id
     return Promise.resolve({book_id: id});
 }
 
