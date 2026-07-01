@@ -192,9 +192,6 @@ function fetchPageTitle(bookId) {
         }
     }).catch(function() {});
 }
-    // 链接包含 /book/ 或纯 book_id
-    return Promise.resolve({book_id: id});
-}
 
 function fetchCount(bookId) {
     proxyFetch('https://fanqienovel.com/api/reader/directory/detail?bookId=' + bookId).then(function(data) {
