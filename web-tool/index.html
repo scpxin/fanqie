@@ -174,14 +174,42 @@ function doSearch() {
 }
 
 function resolveId(q, id) {
+    // /reader/ 链接: 抓取页面 HTML 提取 book_id
     if (q.indexOf('/reader/') !== -1) {
-        return Promise.resolve({book_id: null, error: '章节链接无法直接解析，请复制书籍名搜索'});
+        return proxyFetchText('https://fanqienovel.com/reader/' + id).then(function(html) {
+            var m = html.match(/"bookId"\s*:\s*"(\d+)"/);
+            if (m) {
+                var tm = html.match(/"bookName"\s*:\s*"([^"]*)"/);
+                return {book_id: m[1], title: tm ? tm[1] : ''};
+            }
+            return {book_id: null, error: '无法从页面解析书籍信息，请复制书名搜索'};
+        }).catch(function(e) {
+            return {book_id: null, error: '无法连接: ' + e.message};
+        });
     }
+    // /page/ 链接: ID 就是 book_id，抓取页面标题获取书名
     if (q.indexOf('/page/') !== -1) {
         fetchPageTitle(id);
         return Promise.resolve({book_id: id});
     }
     return Promise.resolve({book_id: id});
+}
+
+function proxyFetchText(url) {
+    if (!CORS_PROXY) {
+        return Promise.reject(new Error('未配置代理'));
+    }
+    var controller = new AbortController();
+    var timeout = setTimeout(function() { controller.abort(); }, 20000);
+    return fetch(CORS_PROXY + encodeURIComponent(url), {signal: controller.signal}).then(function(r) {
+        clearTimeout(timeout);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.text();
+    }).catch(function(e) {
+        clearTimeout(timeout);
+        if (e.name === 'AbortError') throw new Error('请求超时');
+        throw e;
+    });
 }
 
 function fetchPageTitle(bookId) {
@@ -348,7 +376,7 @@ function runWorker() {
                 current++;
                 updateProgress();
                 step();
-            }).catch(function() {
+            }).catch(function(e) {
                 contentParts.push('\n\n第' + (idx + 1) + '章\n\n[下载失败: ' + e.message + ']');
                 current++;
                 updateProgress();
