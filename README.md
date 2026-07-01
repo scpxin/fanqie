@@ -27,20 +27,30 @@
 
 ---
 
-## 方式二：网页下载器（无需安装任何扩展）
+## 方式二：网页下载器（搭代理后才可用）
 
-**文件**: `docs/index.html`
+**文件**: `docs/index.html` + `proxy-worker.js`
 
-一个纯前端网页，打开即用。通过 CORS 代理访问 API，**无需后端服务器**，已部署到 GitHub Pages。
+一个纯前端网页，通过自建 CORS 代理访问 API，部署到 GitHub Pages。
 
-### 使用方法
+### 限制说明
 
-直接打开：`https://scpxin.github.io/fanqie/`（需先在仓库设置中启用 Pages，见下方部署步骤）
+番茄小说 API 有 CORS 限制，浏览器无法直接调用。公共 CORS 代理（如 corsproxy.io）已被字节跳动 WAF 列入黑名单。需要自建一个代理。
 
-在页面中：
-- **按书名搜索**：输入书名搜索，选择搜索结果中的书籍
-- **粘贴链接**：直接粘贴 `fanqienovel.com` 的章节或书籍链接，自动识别并定位
-- **下载整本**：点击「下载整本 TXT」，等待完成后点击「保存 TXT 文件」
+### 第一步：部署代理（Cloudflare Workers，免费）
+
+1. 打开 [Cloudflare Workers](https://workers.cloudflare.com/)，注册 / 登录
+2. 点击 **Create a Service** → 选择 **HTTP handler**
+3. 将 `proxy-worker.js` 的内容粘贴到编辑器
+4. 点击 **Save and Deploy**
+5. 记下分配的 URL，格式为 `https://xxx.workers.dev`
+
+### 第二步：配置网页
+
+1. 打开 `docs/index.html`
+2. 找到顶部的 `var CORS_PROXY = '';` 
+3. 填入你的代理地址：`var CORS_PROXY = 'https://xxx.workers.dev/?url=';`
+4. 推送更新到 GitHub
 
 ### 部署到 GitHub Pages
 
@@ -50,19 +60,25 @@
 4. 点击 **Save**
 5. 约 1 分钟后访问 `https://scpxin.github.io/fanqie/`
 
+### 使用方法
+
+- **按书名搜索**：输入书名，选择搜索结果中的书籍
+- **下载整本**：点击「下载整本 TXT」，等待完成后保存
+
 ### 原理
 
-所有 API 请求通过 `https://corsproxy.io/` 代理转发，绕过浏览器跨域限制：
+```
+浏览器 → Cloudflare Worker 代理 → 番茄 API 服务器
+        (添加 CORS 头)
+```
 
 | API | 说明 |
 |-----|------|
 | 搜索 API | `novel.snssdk.com` / 搜索书名 |
-| 目录 API | `fanqienovel.com/api/reader/directory/detail` / 获取章节目录 |
-| 内容 API | `101.35.133.34:5000/api/content` / 获取完整文本 |
+| 目录 API | `fanqienovel.com/api/reader/directory/detail` / 章节目录 |
+| 内容 API | `101.35.133.34:5000/api/content` / 完整文本 |
 
-### 本地运行（备选）
-
-如果 CORS 代理不可用，也可以用 Python 本地启动：
+### 本地运行（备选，无需部署代理）
 
 ```bash
 cd web-tool
@@ -78,13 +94,14 @@ python3 server.py
 ```
 fanqie/
 ├── README.md
+├── proxy-worker.js            # Cloudflare Worker 代理脚本
 ├── userscript/
-│   └── fanqie.user.js        # 油猴脚本
+│   └── fanqie.user.js         # 油猴脚本（推荐，无需代理）
 ├── web-tool/
-│   ├── server.py             # 本地 Python 后端（备选）
-│   └── index.html            # 网页前端源文件
+│   ├── server.py              # 本地 Python 后端（备选）
+│   └── index.html             # 网页前端源文件
 └── docs/
-    └── index.html            # GitHub Pages 部署文件
+    └── index.html             # GitHub Pages 部署文件
 ```
 
 ---
@@ -113,4 +130,4 @@ fanqie/
 - 仅供学习交流使用
 - 内容 API 服务器 `101.35.133.34` 为第三方维护，稳定性无法保证
 - 下载全本需数分钟，取决于网络和章节数量
-- CORS 代理 `corsproxy.io` 为公共服务，如不可用可改用油猴脚本或本地 Python 版本
+- 网页版需自行部署 Cloudflare Worker 代理（免费），详见上方说明
