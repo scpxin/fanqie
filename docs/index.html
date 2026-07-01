@@ -190,9 +190,11 @@ function fetchCount(bookId) {
 function renderResults(list) {
     var html = '';
     list.forEach(function(b) {
-        html += '<div class="book-item" onclick="selectBook(\'' + b.book_id + '\',\'' + esc2(b.title) + '\',\'' + esc2(b.author) + '\')">' +
-            '<div><div class="book-title">' + escHtml(b.title) + '</div><div class="book-meta">' + escHtml(b.author) + '</div></div>' +
-            '<div class="book-count" id="count-' + b.book_id + '">...</div></div>';
+        var title = b.title || b.book_name || '';
+        var author = b.author || '';
+        html += '<div class="book-item" data-id="' + escHtml(b.book_id) + '" data-title="' + escHtml(title) + '" data-author="' + escHtml(author) + '">' +
+            '<div><div class="book-title">' + escHtml(title || b.book_id) + '</div><div class="book-meta">' + escHtml(author) + '</div></div>' +
+            '<div class="book-count" id="count-' + escHtml(b.book_id) + '">...</div></div>';
     });
     $('results').innerHTML = html;
 }
@@ -358,8 +360,13 @@ function updateProgress() {
 // ====== 工具函数 ======
 $('searchInput').addEventListener('keydown', function(e){ if(e.key==='Enter') doSearch(); });
 
-function esc2(s){ return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
-function escHtml(s){ var d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+$('results').addEventListener('click', function(e) {
+    var el = e.target.closest('.book-item');
+    if (!el) return;
+    selectBook(el.getAttribute('data-id'), el.getAttribute('data-title'), el.getAttribute('data-author'));
+});
+
+function escHtml(s){ var d=document.createElement('div'); d.textContent=s || ''; return d.innerHTML; }
 
 // 暴露到全局
 window.doSearch = doSearch;
