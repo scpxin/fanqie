@@ -33,50 +33,84 @@
 
 一个纯前端网页，通过自建 CORS 代理访问 API，部署到 GitHub Pages。
 
-### 限制说明
+**限制**：番茄 API 有 CORS 限制，公共代理已被封，需自建 Cloudflare Worker 代理（免费，约 3 分钟完成）。
 
-番茄小说 API 有 CORS 限制，浏览器无法直接调用。公共 CORS 代理（如 corsproxy.io）已被字节跳动 WAF 列入黑名单。需要自建一个代理。
+---
 
-### 第一步：部署代理（Cloudflare Workers，免费）
+### 完整部署流程
 
-1. 打开 [Cloudflare Workers](https://workers.cloudflare.com/)，注册 / 登录
-2. 点击 **Create a Service** → 选择 **HTTP handler**
-3. 将 `proxy-worker.js` 的内容粘贴到编辑器
-4. 点击 **Save and Deploy**
-5. 记下分配的 URL，格式为 `https://xxx.workers.dev`
+#### 第 1 步：注册 Cloudflare 账号
 
-### 第二步：配置网页
+1. 打开 https://dash.cloudflare.com/sign-up
+2. 用邮箱注册（Google/GitHub/Apple 均可快速登录）
+3. 登录后会进入 Cloudflare 仪表盘
 
-1. 打开 `docs/index.html`
-2. 找到顶部的 `var CORS_PROXY = '';` 
-3. 填入你的代理地址：`var CORS_PROXY = 'https://xxx.workers.dev/?url=';`
-4. 推送更新到 GitHub
+#### 第 2 步：创建 Worker
 
-### 部署到 GitHub Pages
+1. 打开 https://dash.cloudflare.com/ ，在左侧菜单点击 **Workers & Pages**
+    > 如果没看到这个菜单，可以直达 https://dash.cloudflare.com/workers-and-pages
 
-1. 打开仓库 Settings 页面：`https://github.com/scpxin/fanqie/settings/pages`
-2. **Source** 选择 **Deploy from a branch**
-3. **Branch** 选择 `master`，目录选择 `/docs`
-4. 点击 **Save**
-5. 约 1 分钟后访问 `https://scpxin.github.io/fanqie/`
+2. 点击页面右侧蓝色按钮 **「创建」**（Create）
+
+3. 选择 **「创建 Worker」**（Create Worker）
+
+4. 你会看到一个代码编辑器。**把里面默认的代码全部删除**，然后粘贴 `proxy-worker.js` 的全部内容：
+   - 可以在 GitHub 上打开这个文件：https://raw.githubusercontent.com/scpxin/fanqie/master/proxy-worker.js
+   - 全选复制，粘贴到编辑器中
+
+5. 点击右上角 **「部署」**（Deploy）按钮
+
+6. 部署成功后，你会看到一个域名，格式为：
+   ```
+   xxx.你的用户名.workers.dev
+   ```
+   把它记下来。完整代理地址就是：
+   ```
+   https://xxx.你的用户名.workers.dev/?url=
+   ```
+
+#### 第 3 步：配置网页
+
+1. 打开仓库中的 `docs/index.html`
+2. 找到第 3 行的 `var CORS_PROXY = '';`
+3. 把空字符串替换为你的代理地址：
+   ```javascript
+   var CORS_PROXY = 'https://xxx.你的用户名.workers.dev/?url=';
+   ```
+4. 提交并推送这个改动
+
+#### 第 4 步：启用 GitHub Pages（只需做一次）
+
+1. 打开 https://github.com/scpxin/fanqie/settings/pages
+2. **Source** 选 **Deploy from a branch**
+3. **Branch** 选 `master`，目录选 `/docs`，点击 **Save**
+4. 约 1 分钟后访问 https://scpxin.github.io/fanqie/
+
+---
+
+### 验证代理是否部署成功
+
+在浏览器中打开这个地址（替换为你的实际域名）：
+
+```
+https://xxx.你的用户名.workers.dev/?url=https%3A%2F%2Fnovel.snssdk.com%2Fapi%2Fnovel%2Fchannel%2Fhomepage%2Fsearch%2Fsearch%2Fv1%2F%3Faid%3D1967%26q%3Dtest%26offset%3D0
+```
+
+如果返回一堆 JSON 数据（而不是白屏或报错），说明代理已成功运行。
+
+---
 
 ### 使用方法
 
-- **按书名搜索**：输入书名，选择搜索结果中的书籍
-- **下载整本**：点击「下载整本 TXT」，等待完成后保存
+打开 https://scpxin.github.io/fanqie/ 后：
+- 输入书名 → 点搜索 → 选择搜索结果 → 点击「下载整本 TXT」
 
 ### 原理
 
 ```
 浏览器 → Cloudflare Worker 代理 → 番茄 API 服务器
-        (添加 CORS 头)
+        (添加 CORS 响应头)
 ```
-
-| API | 说明 |
-|-----|------|
-| 搜索 API | `novel.snssdk.com` / 搜索书名 |
-| 目录 API | `fanqienovel.com/api/reader/directory/detail` / 章节目录 |
-| 内容 API | `101.35.133.34:5000/api/content` / 完整文本 |
 
 ### 本地运行（备选，无需部署代理）
 
