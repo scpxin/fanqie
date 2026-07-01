@@ -128,7 +128,9 @@ function formatTime(s) {
 
 // ====== 搜索 ======
 function doSearch() {
+    console.log('doSearch called');
     var q = $('searchInput').value.trim();
+    console.log('query:', q);
     if (!q) return;
     var btn = $('searchBtn');
     btn.disabled = true;
