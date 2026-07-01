@@ -54,7 +54,7 @@
 
 <div class="header">
     <h1>番茄小说下载器</h1>
-    <p>粘贴链接或搜索书名，一键下载整本 TXT 小说</p>
+    <p>搜索书名查看目录 | 下载整本请安装<a href="https://raw.githubusercontent.com/scpxin/fanqie/master/userscript/fanqie.user.js" style="color:#fff;text-decoration:underline">油猴脚本</a></p>
 </div>
 
 <div class="container">
@@ -64,7 +64,7 @@
             <input type="text" id="searchInput" placeholder="书名 / 章节链接 / book_id" autofocus>
             <button id="searchBtn" onclick="doSearch()">搜索</button>
         </div>
-        <div class="tip">支持搜索书名，或直接粘贴 fanqienovel.com 的章节链接</div>
+        <div class="tip">搜索书名或粘贴链接查看目录。下载 TXT 请用油猴脚本（代理被内容服务器屏蔽）</div>
     </div>
 
     <div id="results"></div>
@@ -384,6 +384,14 @@ function runWorker() {
                 contentParts.push('\n\n第' + (idx + 1) + '章\n\n[下载失败: ' + e.message + ']');
                 current++;
                 updateProgress();
+                // 如果是 403，这是代理被内容服务器封了，停止继续尝试
+                if (e.message.indexOf('403') !== -1) {
+                    state = 'paused';
+                    updateButtons();
+                    $('progressLabel').textContent = '下载受阻 (第' + current + '/' + total + ')';
+                    $('dlError').innerHTML = '<div class="error">内容服务器屏蔽了代理 IP，网页版暂不支持下载。<br/>请安装 <a href="https://raw.githubusercontent.com/scpxin/fanqie/master/userscript/fanqie.user.js" target="_blank">油猴脚本</a> 进行下载（脚本直接在你电脑上运行，不受 IP 限制）。</div>';
+                    return;
+                }
                 step();
             });
         }, wait);
