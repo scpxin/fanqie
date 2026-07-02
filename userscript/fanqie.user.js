@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name              番茄小说免费阅读
 // @namespace         https://github.com/scpxin/fanqie
-// @version           2.0.2
+// @version           2.0.3
 // @description       自动获取番茄小说锁定章节的完整内容，支持下载整本
 // @license           MIT License
 // @match             https://fanqienovel.com/*
@@ -233,6 +233,8 @@
         _dlPaused = !_dlPaused;
         var btn = document.getElementById('fq-modal-pause');
         if (btn) btn.textContent = _dlPaused ? '继续' : '暂停';
+        var saveBtn = document.getElementById('fq-modal-save');
+        if (saveBtn && _dlPaused && _dlContent.length > 0) saveBtn.style.display = 'inline-block';
         if (!_dlPaused) dlWorker();
     }
 
