@@ -1,6 +1,6 @@
 # 番茄小说下载工具
 
-两个番茄小说下载工具，均无需安装任何软件。
+两个番茄小说下载工具：油猴脚本（推荐，全功能）和网页版（搜索+浏览）。
 
 ---
 
@@ -12,10 +12,10 @@
 
 ### 功能
 
-- 打开章节页面自动显示完整内容
+- 打开章节页面自动显示完整内容（跳过付费锁）
 - 一键下载整本小说为 TXT 文件
-- 下载过程支持暂停 / 继续
-- 实时显示下载进度（章节数、速度、预计剩余时间）
+- 下载过程支持暂停 / 继续，暂停后随时保存已下载部分
+- 实时显示下载进度（章节数、速度）
 - 右下角工具栏：获取全文、复制、下载整本
 
 ### 安装
@@ -27,17 +27,30 @@
 
 ---
 
-## 方式二：网页下载器（搭代理后才可用）
+## 方式二：网页版
 
 **文件**: `docs/index.html` + `proxy-worker.js`
 
-一个纯前端网页，通过自建 CORS 代理访问 API，部署到 GitHub Pages。
+纯前端网页，支持搜索小说、浏览目录。完整下载功能需本地运行 Python 代理。
 
-**限制**：番茄 API 有 CORS 限制，公共代理已被封，需自建 Cloudflare Worker 代理（免费，约 3 分钟完成）。
+### 远程模式（GitHub Pages + Cloudflare Worker）
 
----
+地址: https://scpxin.github.io/fanqie/
 
-### 完整部署流程
+- 支持搜索小说、查看章节目录
+- 下载功能受限（内容 API 仅限中国 IP，Worker 海外节点被拒）
+- 需自建 Cloudflare Worker 代理（详见下方部署步骤）
+
+### 本地模式（完整功能）
+
+```bash
+cd web-tool
+python3 server.py
+```
+
+然后打开 `http://localhost:8000`，全功能可用（搜索、目录、内容、下载）。网页会自动检测运行环境切换 API 源。
+
+### Worker 部署流程
 
 #### 第 1 步：注册 Cloudflare 账号
 
@@ -86,40 +99,15 @@
 3. **Branch** 选 `master`，目录选 `/docs`，点击 **Save**
 4. 约 1 分钟后访问 https://scpxin.github.io/fanqie/
 
----
+### 验证代理
 
-### 验证代理是否部署成功
-
-在浏览器中打开这个地址（替换为你的实际域名）：
+在浏览器中打开此地址（替换为你的实际域名）：
 
 ```
 https://xxx.你的用户名.workers.dev/?url=https%3A%2F%2Fnovel.snssdk.com%2Fapi%2Fnovel%2Fchannel%2Fhomepage%2Fsearch%2Fsearch%2Fv1%2F%3Faid%3D1967%26q%3Dtest%26offset%3D0
 ```
 
-如果返回一堆 JSON 数据（而不是白屏或报错），说明代理已成功运行。
-
----
-
-### 使用方法
-
-打开 https://scpxin.github.io/fanqie/ 后：
-- 输入书名 → 点搜索 → 选择搜索结果 → 点击「下载整本 TXT」
-
-### 原理
-
-```
-浏览器 → Cloudflare Worker 代理 → 番茄 API 服务器
-        (添加 CORS 响应头)
-```
-
-### 本地运行（备选，无需部署代理）
-
-```bash
-cd web-tool
-python3 server.py
-```
-
-然后打开 `http://localhost:8000`
+如果返回 JSON 数据（而非白屏或报错），说明代理已成功运行。
 
 ---
 
@@ -128,15 +116,40 @@ python3 server.py
 ```
 fanqie/
 ├── README.md
-├── proxy-worker.js            # Cloudflare Worker 代理脚本
+├── proxy-worker.js                   # Cloudflare Worker 代理脚本
 ├── userscript/
-│   └── fanqie.user.js         # 油猴脚本（推荐，无需代理）
+│   └── fanqie.user.js                # 油猴脚本（推荐）
 ├── web-tool/
-│   ├── server.py              # 本地 Python 后端（备选）
-│   └── index.html             # 网页前端源文件
-└── docs/
-    └── index.html             # GitHub Pages 部署文件
+│   ├── server.py                     # Python 本地后端
+│   └── index.html                    # 网页前端源文件（双模式自适应）
+├── docs/
+│   └── index.html                    # GitHub Pages 部署文件
+└── .monkeycode/specs/ai-novel-generator/
+    ├── requirements.md               # AI 仿写需求文档
+    └── design.md                     # AI 仿写技术设计
 ```
+
+---
+
+## 更新日志
+
+### v2.0.3 (2026-07-02)
+- 暂停下载后显示「保存 TXT」按钮，可随时保存已下载章节
+
+### v2.0.2 (2026-07-02)
+- 修复严格模式下 `_dlIds` 未声明导致的「获取目录失败」错误
+
+### v2.0.1 (2026-07-02)
+- 修复部分章节页面无法提取 bookId 的问题（增加多路径回退+HTML 正则提取）
+
+### v2.0.0 (2026-06-27)
+- 首个稳定版：自动获取完整内容、整本下载、暂停/继续、工具栏
+
+---
+
+## 计划中
+
+- AI 小说风格分析 + 仿写生成（需求和技术设计已完成，待开发）
 
 ---
 
@@ -152,7 +165,7 @@ fanqie/
 
 ```
 章节链接 /reader/{item_id}
-    → 官方 API 获取 book_id
+    → __INITIAL_STATE__ / HTML 提取 bookId
     → 官方目录 API 获取所有章节 ID 列表
     → 自建内容 API 逐章获取完整文本
 ```
